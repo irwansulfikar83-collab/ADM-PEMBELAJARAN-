@@ -1,0 +1,6 @@
+{
+  "name": "Si-Admin Guru BI: Administrasi Pembelajaran Bahasa Indonesia (CP 020/H/KR/2026)",
+  "description": "Aplikasi Administrasi Pembelajaran Lengkap Mata Pelajaran Bahasa Indonesia Kurikulum Merdeka berpedoman pada SK BSKAP CP No. 020/H/KR/2026. Lengkap dengan Analisis CP-TP-ATP, Prota, Prosem, Modul Ajar/RPK Deep Learning, LKPD Berdiferensiasi, Instrumen Asesmen HOTS, Remedial, dan Cetak Dokumen Siap Pakai.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
