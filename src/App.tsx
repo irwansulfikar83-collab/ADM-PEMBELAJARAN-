@@ -14,6 +14,15 @@ import { TabLKPD } from './components/tabs/TabLKPD';
 import { TabAsesmenSoal } from './components/tabs/TabAsesmenSoal';
 import { TabRemedial } from './components/tabs/TabRemedial';
 import { TabAIGenerator } from './components/tabs/TabAIGenerator';
+import { DeployModal } from './components/DeployModal';
+import {
+  loginWithGoogle,
+  logoutUser,
+  subscribeToAuth,
+  saveSchoolProfileToFirestore,
+  getSchoolProfileFromFirestore,
+} from './firebase/service';
+import { User } from 'firebase/auth';
 
 import {
   BookOpen,
@@ -33,6 +42,12 @@ import {
   ChevronRight,
   Sparkles,
   Info,
+  GitBranch,
+  Cloud,
+  CloudCheck,
+  LogIn,
+  LogOut,
+  Flame,
 } from 'lucide-react';
 
 const DEFAULT_PROFILE: SchoolProfile = {
@@ -66,11 +81,68 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>('cp');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string>('');
 
+  // Subscribe to Firebase Authentication
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        setIsCloudSyncing(true);
+        setSyncStatusMsg('Menyinkronkan profil dari Firestore...');
+        try {
+          const remoteProfile = await getSchoolProfileFromFirestore(user.uid);
+          if (remoteProfile) {
+            setProfile(remoteProfile);
+            setSyncStatusMsg('Profil berhasil disinkronkan dari Cloud!');
+          } else {
+            // Upload local profile to Firestore
+            await saveSchoolProfileToFirestore(user.uid, profile);
+            setSyncStatusMsg('Profil lokal berhasil diunggah ke Firestore!');
+          }
+        } catch (err) {
+          console.error('Error fetching profile from Firestore:', err);
+        } finally {
+          setIsCloudSyncing(false);
+          setTimeout(() => setSyncStatusMsg(''), 3000);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Save to local and Firestore when profile changes
   useEffect(() => {
     localStorage.setItem('siadmin_bi_profile', JSON.stringify(profile));
-  }, [profile]);
+    if (currentUser) {
+      saveSchoolProfileToFirestore(currentUser.uid, profile).catch((err) => {
+        console.error('Failed to sync profile update to Firestore:', err);
+      });
+    }
+  }, [profile, currentUser]);
+
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error('Login failed:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setSyncStatusMsg('Anda telah logout. Mode offline aktif.');
+      setTimeout(() => setSyncStatusMsg(''), 3000);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -157,6 +229,55 @@ export default function App() {
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-2">
+            {/* GitHub & Deploy Modal Trigger */}
+            <button
+              onClick={() => setIsDeployModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg shadow-sm hover:shadow transition-all border border-emerald-400/30"
+              title="Pusat integrasi GitHub & deployment ke Firebase Hosting"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-emerald-200" />
+              <span className="hidden sm:inline">GitHub & Deploy</span>
+            </button>
+
+            {/* Firebase Auth Status / Login Button */}
+            {currentUser ? (
+              <div className="flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-xs">
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || 'Guru'}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] font-bold text-white">
+                    {currentUser.displayName ? currentUser.displayName[0] : 'G'}
+                  </div>
+                )}
+                <span className="max-w-[100px] truncate text-emerald-200 text-[11px] font-medium hidden md:inline">
+                  {currentUser.displayName || currentUser.email}
+                </span>
+                <span title="Tersinkron ke Firestore Cloud" className="text-amber-400 flex items-center">
+                  <Flame className="w-3.5 h-3.5" />
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-slate-400 hover:text-rose-300 p-0.5 ml-1 transition-colors"
+                  title="Logout dari akun"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-emerald-100 rounded-lg border border-white/20 transition-colors"
+                title="Masuk dengan Akun Google (Belajar.id) untuk sinkronisasi cloud"
+              >
+                <LogIn className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="hidden md:inline">Masuk Google</span>
+              </button>
+            )}
+
             {/* School Profile Trigger */}
             <button
               onClick={() => setIsProfileModalOpen(true)}
@@ -164,7 +285,7 @@ export default function App() {
               title="Sesuaikan identitas sekolah, kepala sekolah, dan guru"
             >
               <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="max-w-[120px] sm:max-w-[180px] truncate text-left">
+              <span className="max-w-[100px] sm:max-w-[150px] truncate text-left">
                 {profile.namaSekolah}
               </span>
             </button>
@@ -172,11 +293,11 @@ export default function App() {
             {/* Export Word (.doc) Button */}
             <button
               onClick={handleExportWord}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm hover:shadow transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg shadow-sm hover:shadow transition-all"
               title="Unduh dokumen saat ini ke format Microsoft Word / HTML"
             >
               {downloadSuccess ? <Check className="w-3.5 h-3.5 text-emerald-200" /> : <Download className="w-3.5 h-3.5" />}
-              <span className="hidden md:inline">{downloadSuccess ? 'Berhasil Unduh' : 'Unduh .doc'}</span>
+              <span className="hidden lg:inline">{downloadSuccess ? 'Berhasil Unduh' : 'Unduh .doc'}</span>
             </button>
 
             {/* Print Button */}
@@ -215,6 +336,24 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Cloud Sync Status Toast / Bar (no-print) */}
+      {syncStatusMsg && (
+        <div className="bg-emerald-800 text-white text-xs px-4 py-1.5 flex items-center justify-between no-print animate-in fade-in slide-in-from-top-1">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-300 animate-pulse" />
+              {syncStatusMsg}
+            </span>
+            <button
+              onClick={() => setSyncStatusMsg('')}
+              className="text-white/80 hover:text-white text-[11px] underline"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 3. Horizontal Scrollable Navigation Tabs (no-print) */}
       <div className="bg-white border-b border-slate-200 sticky top-[57px] z-30 shadow-2xs no-print">
@@ -288,6 +427,13 @@ export default function App() {
         profile={profile}
         onSave={(newProfile) => setProfile(newProfile)}
         onReset={handleResetProfile}
+      />
+
+      {/* GitHub & Firebase Deployment Modal */}
+      <DeployModal
+        isOpen={isDeployModalOpen}
+        onClose={() => setIsDeployModalOpen(false)}
+        userEmail={currentUser?.email}
       />
     </div>
   );

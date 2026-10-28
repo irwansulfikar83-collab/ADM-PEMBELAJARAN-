@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profil pengguna guru yang terotentikasi",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 256 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email"]
+    },
+    "SchoolProfileDoc": {
+      "title": "SchoolProfileDoc",
+      "description": "Dokumen konfigurasi identitas sekolah dan guru pengampu",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "namaSekolah": { "type": "string", "maxLength": 256 },
+        "npsn": { "type": "string", "maxLength": 32 },
+        "namaGuru": { "type": "string", "maxLength": 256 },
+        "nipGuru": { "type": "string", "maxLength": 64 },
+        "namaKepalaSekolah": { "type": "string", "maxLength": 256 },
+        "nipKepalaSekolah": { "type": "string", "maxLength": 64 },
+        "kotaKabupaten": { "type": "string", "maxLength": 128 },
+        "provinsi": { "type": "string", "maxLength": 128 },
+        "tahunAjaran": { "type": "string", "maxLength": 32 },
+        "mataPelajaran": { "type": "string", "maxLength": 128 },
+        "fase": { "type": "string", "maxLength": 64 },
+        "kelas": { "type": "string", "maxLength": 64 },
+        "semester": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "namaSekolah", "namaGuru"]
+    },
+    "SavedModulDoc": {
+      "title": "SavedModulDoc",
+      "description": "Modul Ajar atau RPK yang disimpan atau dibuat oleh guru",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "judul": { "type": "string", "maxLength": 256 },
+        "bab": { "type": "string", "maxLength": 64 },
+        "alokasi": { "type": "string", "maxLength": 128 },
+        "elemen": { "type": "string", "maxLength": 256 },
+        "tujuan": { "type": "string", "maxLength": 4096 },
+        "pemahamanBermakna": { "type": "string", "maxLength": 2048 },
+        "kearifanLokal": { "type": "string", "maxLength": 256 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "judul"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Data profil akun guru"
+    },
+    "/users/{userId}/profiles/{profileId}": {
+      "schema": "SchoolProfileDoc",
+      "description": "Data identitas sekolah yang dikonfigurasi guru"
+    },
+    "/users/{userId}/modul_ajar/{modulId}": {
+      "schema": "SavedModulDoc",
+      "description": "Koleksi modul ajar yang disimpan oleh guru"
+    }
+  }
+}
